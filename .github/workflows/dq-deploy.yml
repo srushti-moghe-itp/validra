@@ -22,17 +22,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
         with:
           python-version: '3.11'
 
-      - name: Install Databricks CLI (new)
-        uses: databricks/setup-cli@v0.240.0
+      - name: Install Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
 
       - name: Verify Databricks CLI
         run: |
@@ -52,8 +52,8 @@ jobs:
       - name: Detect bundle changes
         id: bundle_changes
         run: |
-          # Find all databricks.yml files in dq_jobs/ (space-delimited for $GITHUB_OUTPUT)
-          BUNDLES=$(find dq_jobs -name 'databricks.yml' -type f | head -5 | tr '\n' ' ')
+          # Find all databricks.yml files in dq_jobs/
+          BUNDLES=$(find dq_jobs -name 'databricks.yml' -type f | head -5)
           if [ -z "$BUNDLES" ]; then
             echo "No bundles found in dq_jobs/"
             exit 0
