@@ -15,7 +15,7 @@ resources:
             base_parameters:
               dataset_catalog: dbx-data-dev
               dataset_schema: fhir-silver
-              dataset_tables: allergy_intolerance,care_plan,care_team,claim,condition,diagnostic_report,document_reference,encounter,immunization,medication,medication_request,observation,patient,procedure
+              dataset_tables: allergy_intolerance
               config_catalog: dbx-data-dev
               config_schema: dbx-dq-configs-dev
               config_table: dq_rules
@@ -23,10 +23,10 @@ resources:
               target_schema: fhir-gold
               quarantine_catalog: dbx-data-dev
               quarantine_schema: fhir-silver-error
-              quarantine_table_name: unified_quarantine
-              enable_quarantine: True
+              quarantine_table_name: 
+              enable_quarantine: False
               enable_encryption: False
-              encryption_key_name: 
+              encryption_key_name: ENCRYPTION_KEY_PII
               source_is_encrypted: False
           environment_key: validra_serverless_env
       environments:
