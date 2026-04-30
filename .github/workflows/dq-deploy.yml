@@ -31,6 +31,13 @@ jobs:
 
       - name: Install Databricks CLI
         uses: databricks/setup-cli@v0.298.0
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - uses: databricks/setup-cli@v0.298.0
 
       - name: Validate Databricks secrets
         id: secrets_check
@@ -46,6 +53,14 @@ jobs:
           else
             echo "secrets_available=true" >> "$GITHUB_OUTPUT"
             echo "Databricks credentials verified."
+              echo "secrets_available=false" >> $GITHUB_OUTPUT
+              echo "Secrets not available (PR context)"
+            else
+              echo "Missing Databricks secrets"
+              exit 1
+            fi
+          else
+            echo "secrets_available=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Detect bundle changes
@@ -55,6 +70,7 @@ jobs:
 
           if [ -z "$BUNDLES" ]; then
             echo "No bundles found."
+            echo "No bundles found"
             exit 0
           fi
 
@@ -107,14 +123,23 @@ jobs:
             ' "$bundle_path")
 
             echo "Running job $job_key from $dir"
+              /^[[:space:]]*jobs:/ {in_jobs=1; next}
+              in_jobs && /^[[:space:]]*[A-Za-z0-9_.-]+:/ {
+                key=$1; sub(":", "", key); print key; exit
+              }
+            ' "$bundle_path")
+
             cd "$dir"
             databricks bundle run "$job_key" -t dev
             cd - > /dev/null
           done
 
-      - name: Report deployment status
+      - name: Report status
         if: always()
         run: |
           echo "## DQ Bundle Deployment Status" >> "$GITHUB_STEP_SUMMARY"
           echo "- Event: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Secrets available: ${{ steps.secrets_check.outputs.secrets_available }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## DQ Bundle Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Secrets available: ${{ steps.secrets_check.outputs.secrets_available }}" >> $GITHUB_STEP_SUMMARY
