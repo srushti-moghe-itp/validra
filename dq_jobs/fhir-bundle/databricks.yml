@@ -1,13 +1,13 @@
 bundle:
-  name: fhir-validation-bundle
+  name: fhir-bundle
 targets:
   dev:
     workspace:
       host: "https://dbc-c30c1e5b-4039.cloud.databricks.com"
 resources:
   jobs:
-    fhir-validation-bundle:
-      name: fhir-validation-bundle
+    fhir-bundle:
+      name: fhir-bundle
       tasks:
         - task_key: run_validation
           notebook_task:
@@ -16,18 +16,18 @@ resources:
               dataset_catalog: dbx-data-dev
               dataset_schema: fhir-silver
               dataset_tables: allergy_intolerance
-              config_catalog: dbx-data-dev
-              config_schema: dbx-dq-configs-dev
+              config_catalog: dbx-dq-configs-dev
+              config_schema: fhir-silver-error
               config_table: dq_rules
               target_catalog: dbx-data-dev
               target_schema: fhir-gold
               quarantine_catalog: dbx-data-dev
               quarantine_schema: fhir-silver-error
-              quarantine_table_name: 
-              enable_quarantine: yes
-              enable_encryption: no
-              encryption_key_name: ENCRYPTION_KEY_PII
-              source_is_encrypted: no
+              quarantine_table_name: unified_quarantine
+              enable_quarantine: True
+              enable_encryption: False
+              encryption_key_name: 
+              source_is_encrypted: False
           environment_key: validra_serverless_env
       environments:
         - environment_key: validra_serverless_env

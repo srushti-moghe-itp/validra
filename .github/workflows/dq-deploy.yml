@@ -19,6 +19,9 @@ jobs:
   deploy_dq_bundles:
     runs-on: ubuntu-latest
     name: Deploy Databricks Validation Bundle
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -40,14 +43,12 @@ jobs:
           databricks bundle --help
 
       - name: Validate Databricks secrets
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           if [ -z "$DATABRICKS_HOST" ] || [ -z "$DATABRICKS_TOKEN" ]; then
             echo "Missing required secrets. Please set DATABRICKS_HOST and DATABRICKS_TOKEN in repository secrets."
             exit 1
           fi
+          echo "Databricks credentials verified successfully."
 
       - name: Detect bundle changes
         id: bundle_changes
@@ -65,9 +66,6 @@ jobs:
 
       - name: Validate Databricks bundles
         if: steps.bundle_changes.outputs.bundles
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           for bundle_path in ${{ steps.bundle_changes.outputs.bundles }}; do
             bundle_dir=$(dirname "$bundle_path")
@@ -82,9 +80,6 @@ jobs:
 
       - name: Deploy Databricks bundles
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.bundle_changes.outputs.bundles
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           for bundle_path in ${{ steps.bundle_changes.outputs.bundles }}; do
             bundle_dir=$(dirname "$bundle_path")
@@ -97,9 +92,6 @@ jobs:
 
       - name: Run validation jobs
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.bundle_changes.outputs.bundles
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           for bundle_path in ${{ steps.bundle_changes.outputs.bundles }}; do
             bundle_dir=$(dirname "$bundle_path")
@@ -134,10 +126,10 @@ jobs:
         run: |
           echo "## DQ Bundle Deployment Status" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Validate**: ✓" >> $GITHUB_STEP_SUMMARY
+          echo "- **Validate**: completed" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.event_name }}" == "push" ]; then
-            echo "- **Deploy**: ✓" >> $GITHUB_STEP_SUMMARY
-            echo "- **Run**: ✓" >> $GITHUB_STEP_SUMMARY
+            echo "- **Deploy**: completed" >> $GITHUB_STEP_SUMMARY
+            echo "- **Run**: completed" >> $GITHUB_STEP_SUMMARY
           else
             echo "- **Deploy**: (skipped - PR)" >> $GITHUB_STEP_SUMMARY
             echo "- **Run**: (skipped - PR)" >> $GITHUB_STEP_SUMMARY
