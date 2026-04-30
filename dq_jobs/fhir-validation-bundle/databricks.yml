@@ -23,11 +23,11 @@ resources:
               target_schema: fhir-gold
               quarantine_catalog: dbx-data-dev
               quarantine_schema: fhir-silver-error
-              quarantine_table_name: unified_quarantine
-              enable_quarantine: True
-              enable_encryption: False
-              encryption_key_name: 
-              source_is_encrypted: False
+              quarantine_table_name: 
+              enable_quarantine: yes
+              enable_encryption: no
+              encryption_key_name: ENCRYPTION_KEY_PII
+              source_is_encrypted: no
           environment_key: validra_serverless_env
       environments:
         - environment_key: validra_serverless_env
