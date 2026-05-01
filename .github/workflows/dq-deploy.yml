@@ -62,7 +62,11 @@ jobs:
             echo "No bundles found in dq_jobs/"
             exit 0
           fi
-          echo "bundles=$BUNDLES" >> $GITHUB_OUTPUT
+          {
+          echo "bundles<<EOF"
+          echo "$BUNDLES"
+          echo "EOF"
+          } >> "$GITHUB OUTPUT"
           for bundle in $BUNDLES; do
             echo "Found bundle at: $bundle"
           done
