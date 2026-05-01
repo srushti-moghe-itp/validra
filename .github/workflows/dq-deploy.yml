@@ -35,7 +35,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install Databricks CLI
-        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.
+
+      - name: Verify Databricks CLI
+        run: |
+          databricks version
+          databricks bundle --help
 
       - name: Verify Databricks CLI
         run: |
