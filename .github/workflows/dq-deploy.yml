@@ -124,3 +124,4 @@ jobs:
           else
             echo "- **Deploy**: (skipped - PR)" >> $GITHUB_STEP_SUMMARY
             echo "- **Run**: (skipped - PR)" >> $GITHUB_STEP_SUMMARY
+          fi
