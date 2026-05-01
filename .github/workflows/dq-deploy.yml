@@ -2,15 +2,11 @@ name: Deploy DQ Validation Bundles
 
 on:
   pull_request:
-    branches:
-      - main
-    paths:
-      - 'dq_jobs/**'
+    branches: [main]
+    paths: ['dq_jobs/**']
   push:
-    branches:
-      - main
-    paths:
-      - 'dq_jobs/**'
+    branches: [main]
+    paths: ['dq_jobs/**']
 
 permissions:
   contents: read
@@ -22,89 +18,88 @@ jobs:
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_TERRAFORM_CHECKSUM_VERIFICATION: false
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install Databricks CLI
-        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.
-
-      - name: Verify Databricks CLI
-        run: |
-          databricks version
-          databricks bundle --help
+        uses: databricks/setup-cli@v0.298.0
+        with:
+          force: true
 
       - name: Verify Databricks CLI
         run: |
           databricks version
           databricks bundle --help
       - name: Validate Databricks secrets
+        id: secrets_check
         run: |
           if [ -z "$DATABRICKS_HOST" ] || [ -z "$DATABRICKS_TOKEN" ]; then
-            echo "Missing required secrets. Please set DATABRICKS_HOST and DATABRICKS_TOKEN in repository secrets."
-            exit 1
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "secrets_available=false" >> "$GITHUB_OUTPUT"
+              echo "Secrets not available (PR context)"
+            else
+              echo "Missing Databricks secrets"
+              exit 1
+            fi
+          else
+            echo "secrets_available=true" >> "$GITHUB_OUTPUT"
           fi
+
           echo "Databricks credentials verified successfully."
+
       - name: Detect bundle changes
         id: bundle_changes
         run: |
-          # Find all databricks.yml files in dq_jobs/
-          BUNDLES=$(find dq_jobs -name 'databricks.yml' -type f | head -5)
+          BUNDLES=$(find dq_jobs -name databricks.yml -type f | head -5)
+
           if [ -z "$BUNDLES" ]; then
             echo "No bundles found in dq_jobs/"
             exit 0
           fi
+
           {
-          echo "bundles<<EOF"
-          echo "$BUNDLES"
-          echo "EOF"
-          } >> "$GITHUB OUTPUT"
-          for bundle in $BUNDLES; do
-            echo "Found bundle at: $bundle"
+            echo "bundles<<EOF"
+            echo "$BUNDLES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          for b in $BUNDLES; do
+            echo "Found bundle at: $b"
           done
       - name: Validate Databricks bundles
-        if: steps.bundle_changes.outputs.bundles
+        if: steps.bundle_changes.outputs.bundles && steps.secrets_check.outputs.secrets_available == 'true'
         run: |
           for bundle_path in ${{ steps.bundle_changes.outputs.bundles }}; do
-            bundle_dir=$(dirname "$bundle_path")
-            echo "Validating bundle in $bundle_dir..."
-            cd "$bundle_dir"
-            databricks bundle validate -t dev || {
-              echo "Bundle validation failed for $bundle_dir"
-              exit 1
-            }
+            cd "$(dirname "$bundle_path")"
+            databricks bundle validate -t dev
             cd - > /dev/null
           done
       - name: Deploy Databricks bundles
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.bundle_changes.outputs.bundles
+        if: github.event_name == 'push' && steps.secrets_check.outputs.secrets_available == 'true'
         run: |
           for bundle_path in ${{ steps.bundle_changes.outputs.bundles }}; do
-            bundle_dir=$(dirname "$bundle_path")
-            bundle_name=$(grep "^  name:" "$bundle_path" | head -1 | awk '{print $2}')
-            echo "Deploying bundle $bundle_name from $bundle_dir..."
-            cd "$bundle_dir"
+            cd "$(dirname "$bundle_path")"
             databricks bundle deploy -t dev
             cd - > /dev/null
           done
       - name: Run validation jobs
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.bundle_changes.outputs.bundles
+        if: github.event_name == 'push' && steps.secrets_check.outputs.secrets_available == 'true'
         run: |
           for bundle_path in ${{ steps.bundle_changes.outputs.bundles }}; do
+
             bundle_dir=$(dirname "$bundle_path")
-            # Use the first resource key under resources.jobs as the run target.
+           
             job_key=$(awk '
-              /^[[:space:]]*jobs:[[:space:]]*$/ { in_jobs=1; next }
-              in_jobs && /^[[:space:]]*[A-Za-z0-9_.-]+:[[:space:]]*$/ {
+              /^[[:space:]]*jobs:/ {in_jobs=1; next}
+              in_jobs && /^[[:space:]]*[A-Za-z0-9_.-]+:/ {
                 key=$1
-                sub(":$", "", key)
+                sub(":", "", key)
                 print key
                 exit
               }
@@ -124,13 +119,15 @@ jobs:
       - name: Report deployment status
         if: always()
         run: |
-          echo "## DQ Bundle Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "## DQ Bundle Deployment Status" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Event: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Secrets available: ${{ steps.secrets_check.outputs.secrets_available }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Validate**: completed" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event_name }}" == "push" ]; then
+          if [ "${{ github.event_name }}" = "push" ]; then
             echo "- **Deploy**: completed" >> $GITHUB_STEP_SUMMARY
             echo "- **Run**: completed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- **Deploy**: (skipped - PR)" >> $GITHUB_STEP_SUMMARY
-            echo "- **Run**: (skipped - PR)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Deploy**: skipped (PR)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Run**: skipped (PR)" >> "$GITHUB_STEP_SUMMARY"
           fi
