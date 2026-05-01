@@ -19,7 +19,7 @@ resources:
               config_catalog: dbx-data-dev
               config_schema: dbx-dq-configs-dev
               config_table: dq_rules
-              target_catalog: dbx-data-dev
+              target_catalog: 
               target_schema: fhir-gold
               quarantine_catalog: dbx-data-dev
               quarantine_schema: fhir-silver-error
